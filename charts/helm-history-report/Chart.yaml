@@ -1,0 +1,6 @@
+apiVersion: v2
+name: helm-history-report
+description: Collect Helm release history and upload it to Amazon S3
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

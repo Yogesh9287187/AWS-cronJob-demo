@@ -7,6 +7,7 @@ This repository provisions an AWS VPC and an Amazon EKS cluster with a baseline 
 - EKS cluster with managed node group
 - Kubernetes add-ons for CoreDNS, kube-proxy, and VPC CNI
 - Helm chart for namespace defaults and guardrails
+- Helm history reporting CronJobs that save release history to a private S3 bucket
 
 ## Layout
 
@@ -16,17 +17,19 @@ This repository provisions an AWS VPC and an Amazon EKS cluster with a baseline 
 │   └── workflows/
 │       └── terraform.yml
 ├── charts/
-│   └── namespace-baseline/
+│   ├── namespace-baseline/
+│   └── helm-history-report/
 │       ├── Chart.yaml
 │       ├── values.yaml
+│       ├── scripts/
+│       │   ├── collect.ps1
+│       │   └── upload.ps1
 │       └── templates/
-│           ├── _helpers.tpl
-│           ├── namespace.yaml
-│           ├── resourcequota.yaml
-│           ├── limitrange.yaml
+│           ├── cronjob1.yaml
+│           ├── cronjob2.yaml
 │           ├── rbac.yaml
-│           ├── networkpolicy.yaml
-│           └── hpa-template.yaml
+│           ├── scripts-configmap.yaml
+│           └── serviceaccounts.yaml
 ├── main.tf
 ├── outputs.tf
 ├── providers.tf
@@ -85,6 +88,14 @@ kubectl get all,resourcequota,limitrange,role,rolebinding -n workload-test
 ```bash
 terraform destroy -auto-approve
 ```
+
+## Helm history reports
+
+Terraform installs the `helm-history-report` chart into the Kubernetes-valid namespace `cronjob-report` (Kubernetes namespace names cannot contain uppercase letters or underscores). Its collector CronJob runs hourly by default, reads the `test-namespace-baseline` release history from `workload-test-2`, and starts a one-off Job from the uploader CronJob template. The uploader writes each report under `s3://<bucket>/helm-history/<namespace>/<release>/`.
+
+The bucket name is available with `terraform output -raw helm_history_bucket_name`. The bucket blocks public access and uses S3-managed encryption. The uploader uses EKS IRSA and can only write objects to this bucket. S3 storage and request charges apply; reports are retained until removed because no expiration policy is configured.
+
+The demo jobs install Helm, kubectl, or AWS CLI when they start, so their nodes need outbound access to the relevant package/download endpoints. For production, bake pinned tool versions into a maintained image and configure S3 access logging, CloudTrail data events, and CloudWatch request metrics according to your observability and retention requirements.
 
 ## Notes
 

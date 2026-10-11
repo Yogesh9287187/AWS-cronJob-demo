@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helm-history-report-scripts
+  namespace: {{ .Release.Namespace }}
+data:
+  collect.ps1: |-
+{{ .Files.Get "scripts/collect.ps1" | indent 4 }}
+  upload.ps1: |-
+{{ .Files.Get "scripts/upload.ps1" | indent 4 }}

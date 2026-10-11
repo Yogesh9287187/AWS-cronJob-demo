@@ -1,0 +1,17 @@
+history:
+  schedule: "0 * * * *"
+  timeZone: Etc/UTC
+  targetNamespace: workload-test-2
+  releaseName: test-namespace-baseline
+
+storage:
+  bucketName: ""
+  region: us-east-1
+
+serviceAccount:
+  uploaderRoleArn: ""
+
+tools:
+  image: mcr.microsoft.com/powershell:7.4-ubuntu-22.04
+  helmVersion: v3.17.3
+  kubectlVersion: v1.31.0

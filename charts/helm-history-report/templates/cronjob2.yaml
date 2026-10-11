@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: helm-history-uploader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: helm-history-report
+    app.kubernetes.io/component: uploader
+spec:
+  schedule: "0 0 1 1 *"
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 900
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: helm-history-report
+            app.kubernetes.io/component: uploader
+        spec:
+          serviceAccountName: helm-history-uploader
+          restartPolicy: OnFailure
+          containers:
+            - name: upload
+              image: {{ .Values.tools.image | quote }}
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/bash", "-ec"]
+              args:
+                - |
+                  apt-get update
+                  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends awscli ca-certificates curl unzip
+                  curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/{{ .Values.tools.kubectlVersion }}/bin/linux/amd64/kubectl"
+                  chmod +x /usr/local/bin/kubectl
+                  exec pwsh -NoLogo -NoProfile -File /scripts/upload.ps1
+              env:
+                - name: AWS_REGION
+                  value: {{ .Values.storage.region | quote }}
+                - name: S3_BUCKET
+                  value: {{ .Values.storage.bucketName | quote }}
+                - name: TARGET_NAMESPACE
+                  value: {{ .Values.history.targetNamespace | quote }}
+                - name: REPORT_NAMESPACE
+                  value: {{ .Release.Namespace | quote }}
+                - name: HELM_RELEASE
+                  value: {{ .Values.history.releaseName | quote }}
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+          volumes:
+            - name: scripts
+              configMap:
+                name: helm-history-report-scripts
