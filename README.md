@@ -12,10 +12,7 @@ This repository provisions an AWS VPC and an Amazon EKS cluster with a baseline 
 ## Layout
 
 ```text
-.
-├── .github/
-│   └── workflows/
-│       └── terraform.yml
+
 ├── charts/
 │   ├── namespace-baseline/
 │   └── helm-history-report/
